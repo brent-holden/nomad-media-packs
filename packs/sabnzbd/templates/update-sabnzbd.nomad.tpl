@@ -45,20 +45,18 @@ echo "Starting SABnzbd version update job..."
 echo "Installing curl, jq, and unzip..."
 apt-get update -qq && apt-get install -y -qq curl jq unzip > /dev/null 2>&1
 
-# Fetch latest stable container version from Docker Hub
-# SABnzbd stable versions are on page 2+ due to nightly builds, so fetch 500 results
-echo "Fetching latest SABnzbd container version from Docker Hub..."
-CONTAINER_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/sabnzbd/tags?page_size=500" | \
-    jq -r '.results[].name' | \
-    grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | \
-    head -1)
+# Fetch latest stable version from GitHub releases
+# Docker Hub has many nightly builds that push stable tags far down, so GitHub API is more reliable
+echo "Fetching latest SABnzbd version from GitHub releases..."
+CONTAINER_VERSION=$(curl -s "https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest" | \
+    jq -r '.tag_name')
 
-if [ -z "$CONTAINER_VERSION" ]; then
-    echo "Error: Failed to find stable container version from Docker Hub"
+if [ -z "$CONTAINER_VERSION" ] || [ "$CONTAINER_VERSION" = "null" ]; then
+    echo "Error: Failed to find stable version from GitHub releases"
     exit 1
 fi
 
-echo "Latest linuxserver/sabnzbd container version: $CONTAINER_VERSION"
+echo "Latest SABnzbd version: $CONTAINER_VERSION"
 
 # Fetch and install latest Nomad CLI
 echo "Fetching latest Nomad version..."
