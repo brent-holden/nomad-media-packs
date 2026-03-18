@@ -45,18 +45,17 @@ echo "Starting SABnzbd version update job..."
 echo "Installing curl, jq, and unzip..."
 apt-get update -qq && apt-get install -y -qq curl jq unzip > /dev/null 2>&1
 
-# Fetch latest stable version from GitHub releases
-# Docker Hub has many nightly builds that push stable tags far down, so GitHub API is more reliable
-echo "Fetching latest SABnzbd version from GitHub releases..."
-CONTAINER_VERSION=$(curl -s "https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest" | \
-    jq -r '.tag_name')
+# Fetch the amd64 image digest for the latest tag from Docker Hub
+echo "Fetching SABnzbd container image digest from Docker Hub..."
+CONTAINER_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/sabnzbd/tags/latest" | \
+    jq -r '.images[] | select(.architecture == "amd64") | .digest // empty')
 
 if [ -z "$CONTAINER_VERSION" ] || [ "$CONTAINER_VERSION" = "null" ]; then
-    echo "Error: Failed to find stable version from GitHub releases"
+    echo "Error: Failed to find amd64 image digest from Docker Hub"
     exit 1
 fi
 
-echo "Latest SABnzbd version: $CONTAINER_VERSION"
+echo "Latest linuxserver/sabnzbd:latest amd64 image digest: $CONTAINER_VERSION"
 
 # Fetch and install latest Nomad CLI
 echo "Fetching latest Nomad version..."

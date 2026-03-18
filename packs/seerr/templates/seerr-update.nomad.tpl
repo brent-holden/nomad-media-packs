@@ -44,16 +44,29 @@ echo "Fetching latest Seerr container version..."
 apt-get update -qq && apt-get install -y -qq curl jq unzip > /dev/null 2>&1
 
 # Fetch latest container version from Docker Hub
-# seerr/seerr uses 'develop' tag, so we track the digest for changes
-VERSION=$(curl -s "https://hub.docker.com/v2/repositories/seerr/seerr/tags/develop" | \
-    jq -r '.digest // empty' | cut -c1-12)
+# Fetch latest stable tag from Docker Hub (semver tags like v3.0.1)
+TAG=$(curl -s "https://hub.docker.com/v2/repositories/seerr/seerr/tags?page_size=100" | \
+    jq -r '.results[].name' | \
+    grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | \
+    head -1)
 
-if [ -z "$VERSION" ]; then
-    echo "Error: Failed to find container version"
+if [ -z "$TAG" ]; then
+    echo "Error: Failed to find stable container tag"
     exit 1
 fi
 
-echo "Latest seerr/seerr:develop digest: $VERSION"
+echo "Latest seerr/seerr tag: $TAG"
+
+# Fetch the amd64 image digest for this tag
+VERSION=$(curl -s "https://hub.docker.com/v2/repositories/seerr/seerr/tags/$TAG" | \
+    jq -r '.images[] | select(.architecture == "amd64") | .digest // empty')
+
+if [ -z "$VERSION" ]; then
+    echo "Error: Failed to find amd64 image digest for tag $TAG"
+    exit 1
+fi
+
+echo "amd64 image digest: $VERSION"
 
 NOMAD_VERSION=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/nomad | jq -r '.current_version')
 curl -sL "https://releases.hashicorp.com/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip" -o /tmp/nomad.zip

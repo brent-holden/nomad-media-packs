@@ -45,17 +45,28 @@ apt-get update -qq && apt-get install -y -qq curl jq unzip > /dev/null 2>&1
 
 # Fetch latest stable container version from Docker Hub
 # LinuxServer tags stable versions as X.X.X (without -develop, -nightly suffixes)
-VERSION=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/sonarr/tags?page_size=100" | \
+TAG=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/sonarr/tags?page_size=100" | \
     jq -r '.results[].name' | \
     grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | \
     head -1)
 
-if [ -z "$VERSION" ]; then
-    echo "Error: Failed to find stable container version"
+if [ -z "$TAG" ]; then
+    echo "Error: Failed to find stable container tag"
     exit 1
 fi
 
-echo "Latest linuxserver/sonarr container version: $VERSION"
+echo "Latest linuxserver/sonarr tag: $TAG"
+
+# Fetch the amd64 image digest for this tag
+VERSION=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/sonarr/tags/$TAG" | \
+    jq -r '.images[] | select(.architecture == "amd64") | .digest // empty')
+
+if [ -z "$VERSION" ]; then
+    echo "Error: Failed to find amd64 image digest for tag $TAG"
+    exit 1
+fi
+
+echo "amd64 image digest: $VERSION"
 
 NOMAD_VERSION=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/nomad | jq -r '.current_version')
 curl -sL "https://releases.hashicorp.com/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip" -o /tmp/nomad.zip

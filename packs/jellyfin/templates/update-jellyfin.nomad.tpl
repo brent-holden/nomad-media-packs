@@ -48,17 +48,28 @@ apt-get update -qq && apt-get install -y -qq curl jq unzip > /dev/null 2>&1
 # Fetch latest stable container version from Docker Hub
 # LinuxServer tags stable versions as X.X.X (without -nightly suffixes)
 echo "Fetching latest Jellyfin container version from Docker Hub..."
-CONTAINER_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/jellyfin/tags?page_size=100" | \
+TAG=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/jellyfin/tags?page_size=100" | \
     jq -r '.results[].name' | \
     grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | \
     head -1)
 
-if [ -z "$CONTAINER_VERSION" ]; then
-    echo "Error: Failed to find stable container version from Docker Hub"
+if [ -z "$TAG" ]; then
+    echo "Error: Failed to find stable container tag from Docker Hub"
     exit 1
 fi
 
-echo "Latest linuxserver/jellyfin container version: $CONTAINER_VERSION"
+echo "Latest linuxserver/jellyfin tag: $TAG"
+
+# Fetch the amd64 image digest for this tag
+CONTAINER_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/jellyfin/tags/$TAG" | \
+    jq -r '.images[] | select(.architecture == "amd64") | .digest // empty')
+
+if [ -z "$CONTAINER_VERSION" ]; then
+    echo "Error: Failed to find amd64 image digest for tag $TAG"
+    exit 1
+fi
+
+echo "amd64 image digest: $CONTAINER_VERSION"
 
 # Fetch and install latest Nomad CLI
 echo "Fetching latest Nomad version..."
