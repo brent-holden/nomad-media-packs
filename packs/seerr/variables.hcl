@@ -25,7 +25,7 @@ variable "namespace" {
 variable "image" {
   description = "The container image to use for Seerr"
   type        = string
-  default     = "docker.io/seerr/seerr:develop"
+  default     = "docker.io/seerr/seerr:latest"
 }
 
 variable "seerr_uid" {
