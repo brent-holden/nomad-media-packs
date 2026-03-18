@@ -44,20 +44,18 @@ echo "Fetching latest Seerr container version..."
 apt-get update -qq && apt-get install -y -qq curl jq unzip > /dev/null 2>&1
 
 # Fetch latest container version from Docker Hub
-# Fetch latest stable tag from Docker Hub (semver tags like v3.0.1)
-TAG=$(curl -s "https://hub.docker.com/v2/repositories/seerr/seerr/tags?page_size=100" | \
-    jq -r '.results[].name' | \
-    grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | \
-    head -1)
+# Fetch latest stable version from GitHub releases
+TAG=$(curl -s "https://api.github.com/repos/seerr-team/seerr/releases/latest" | \
+    jq -r '.tag_name')
 
-if [ -z "$TAG" ]; then
-    echo "Error: Failed to find stable container tag"
+if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+    echo "Error: Failed to find latest release from GitHub"
     exit 1
 fi
 
-echo "Latest seerr/seerr tag: $TAG"
+echo "Latest seerr release: $TAG"
 
-# Fetch the amd64 image digest for this tag
+# Fetch the amd64 image digest for this tag from Docker Hub
 VERSION=$(curl -s "https://hub.docker.com/v2/repositories/seerr/seerr/tags/$TAG" | \
     jq -r '.images[] | select(.architecture == "amd64") | .digest // empty')
 
