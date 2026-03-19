@@ -59,7 +59,7 @@ This pack creates up to 3 Nomad jobs:
 | `datacenters` | Eligible datacenters | `["dc1"]` |
 | `region` | Nomad region | `global` |
 | `namespace` | Nomad namespace | `default` |
-| `image` | Container image | `docker.io/plexinc/pms-docker:latest` |
+| `image` | Container image | `docker.io/plexinc/pms-docker:plexpass` |
 | `gpu_transcoding` | Enable GPU passthrough | `true` |
 | `plex_uid` | UID for Plex user | `1002` |
 | `plex_gid` | GID for Plex group | `1001` |

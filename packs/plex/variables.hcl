@@ -25,7 +25,7 @@ variable "namespace" {
 variable "image" {
   description = "The container image to use for Plex"
   type        = string
-  default     = "docker.io/plexinc/pms-docker:latest"
+  default     = "docker.io/plexinc/pms-docker:plexpass"
 }
 
 variable "gpu_transcoding" {
