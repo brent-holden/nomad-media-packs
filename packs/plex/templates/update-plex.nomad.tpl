@@ -45,17 +45,15 @@ echo "Starting Plex version update job..."
 echo "Installing curl, jq, and unzip..."
 apt-get update -qq && apt-get install -y -qq curl jq unzip > /dev/null 2>&1
 
-# Fetch the amd64 image digest for the latest tag from Docker Hub
-echo "Fetching Plex container image digest from Docker Hub..."
-PLEX_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/plexinc/pms-docker/tags/latest" | \
-    jq -r '.images[] | select(.architecture == "amd64") | .digest // empty')
+echo "Fetching Plex version from API..."
+PLEX_VERSION=$(curl -s "https://plex.tv/api/downloads/5.json?channel=plexpass" | jq -r '.computer.Linux.version')
 
 if [ -z "$PLEX_VERSION" ] || [ "$PLEX_VERSION" = "null" ]; then
-    echo "Error: Failed to find amd64 image digest from Docker Hub"
+    echo "Error: Failed to extract Plex version from API response"
     exit 1
 fi
 
-echo "Latest plexinc/pms-docker:latest amd64 image digest: $PLEX_VERSION"
+echo "Extracted Plex version: $PLEX_VERSION"
 
 # Get existing claim token from Nomad variable (rendered by template)
 EXISTING_TOKEN="{{- with nomadVar "[[ var "nomad_variable_path" . ]]" -}}{{ .claim_token }}{{- end -}}"
