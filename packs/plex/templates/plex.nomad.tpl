@@ -41,7 +41,7 @@ job "[[ var "job_name" . ]]" {
         ports        = ["plex"]
         network_mode = "host"
 [[- if var "gpu_transcoding" . ]]
-        devices      = ["/dev/dri:/dev/dri"]
+        devices      = ["/dev/dri/card0:/dev/dri/card0", "/dev/dri/renderD128:/dev/dri/renderD128"]
 [[- end ]]
       }
 
