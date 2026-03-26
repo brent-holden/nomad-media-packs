@@ -61,6 +61,7 @@ This pack creates up to 3 Nomad jobs:
 | `namespace` | Nomad namespace | `default` |
 | `image` | Container image | `docker.io/plexinc/pms-docker:plexpass` |
 | `gpu_transcoding` | Enable GPU passthrough | `true` |
+| `gpu_devices` | GPU device mappings (host:container) | `card0`, `renderD128` |
 | `plex_uid` | UID for Plex user | `1002` |
 | `plex_gid` | GID for Plex group | `1001` |
 | `timezone` | Container timezone | `America/New_York` |

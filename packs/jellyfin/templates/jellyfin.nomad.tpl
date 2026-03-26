@@ -44,7 +44,7 @@ job "[[ var "job_name" . ]]" {
         ports        = ["http", "discovery"]
         network_mode = "host"
 [[- if var "gpu_transcoding" . ]]
-        devices      = ["/dev/dri:/dev/dri"]
+        devices      = [[ var "gpu_devices" . | toJson ]]
 [[- end ]]
       }
 

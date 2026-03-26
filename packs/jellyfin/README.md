@@ -55,6 +55,7 @@ This pack creates up to 3 Nomad jobs:
 | `namespace` | Nomad namespace | `default` |
 | `image` | Container image | `docker.io/jellyfin/jellyfin:latest` |
 | `gpu_transcoding` | Enable GPU passthrough | `true` |
+| `gpu_devices` | GPU device mappings (host:container) | `/dev/dri` (all) |
 | `timezone` | Container timezone | `America/New_York` |
 | `cpu` | CPU allocation (MHz) | `16000` |
 | `memory` | Memory allocation (MB) | `16384` |

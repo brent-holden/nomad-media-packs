@@ -27,6 +27,7 @@ Each pack includes:
 | `overseerr-reverse-proxy` | Caddy reverse proxy for Overseerr with HTTPS | 80, 443 |
 | `tautulli` | Tautulli - Plex monitoring and statistics | 8181 |
 | `sabnzbd` | SABnzbd - Usenet download client | 8080 |
+| `unmanic` | Unmanic - Library optimizer for automatic media transcoding | 8888 |
 
 **Note:** Seerr and Overseerr use the same port (5055) and cannot be deployed simultaneously. Seerr is recommended as it supports Jellyfin and Emby in addition to Plex.
 
@@ -133,6 +134,7 @@ nomad-pack run jellyfin --registry=mediaserver
 - Overseerr: http://your-server:5055 (or https://your-dns-name via reverse proxy)
 - Tautulli: http://your-server:8181
 - SABnzbd: http://your-server:8080
+- Unmanic: http://your-server:8888
 
 ## Volume Requirements
 
@@ -160,6 +162,7 @@ The `deploy-media-server.yml` playbook in [nomad-mediaserver-infra](https://gith
 | Overseerr | `overseerr-config` | Configuration and database |
 | Tautulli | `tautulli-config` | Configuration and database |
 | SABnzbd | `sabnzbd-config` | Configuration and database |
+| Unmanic | `unmanic-config` | Configuration and database |
 
 **Important:** Host volumes must be created with `single-node-multi-writer` access mode to allow backup and restore jobs to access the volume while the main service is running. The job templates specify this access mode explicitly.
 
@@ -274,7 +277,8 @@ All packs default to the same UID (1002) and GID (1001) for consistent file perm
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `gpu_transcoding` | Enable GPU passthrough (`/dev/dri`) | `true` |
+| `gpu_transcoding` | Enable GPU passthrough | `true` |
+| `gpu_devices` | GPU device mappings (see [GPU Configuration](#gpu-configuration)) | Pack-specific |
 | `enable_backup` | Deploy periodic backup job | `true` |
 | `enable_update` | Deploy periodic update job | `true` |
 | `enable_restore` | Deploy parameterized restore job | `false` |
@@ -393,6 +397,15 @@ All packs default to the same UID (1002) and GID (1001) for consistent file perm
 | `sabnzbd_uid` | UID for SABnzbd process (PUID) | `1002` |
 | `sabnzbd_gid` | GID for SABnzbd process (PGID) | `1001` |
 | `port` | SABnzbd web interface port | `8080` |
+
+### Unmanic-Specific Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `unmanic_uid` | UID for Unmanic process (PUID) | `1002` |
+| `unmanic_gid` | GID for Unmanic process (PGID) | `1001` |
+| `port` | Unmanic web interface port | `8888` |
+| `cache_path` | Host path for encoding cache (`/tmp/unmanic`) | `/tmp/unmanic` |
 
 ### Backup/Update Variables
 
@@ -713,15 +726,46 @@ nomad var put nomad/jobs/plex claim_token="claim-xxxxxxxxxxxx" version="latest"
 
 The claim token is only needed for initial setup. After Plex is claimed, it persists in the configuration.
 
-### GPU Transcoding
+### GPU Configuration
 
-Ensure `/dev/dri` exists on the host and is accessible. The container maps `/dev/dri:/dev/dri` when `gpu_transcoding=true`.
+GPU-enabled packs (Plex, Jellyfin, Unmanic) support configurable device passthrough via the `gpu_devices` variable. This is important when a system has multiple GPUs and you want to assign specific GPUs to specific services.
+
+Each pack has different defaults based on the intended GPU assignment:
+
+| Pack | Default Devices | GPU |
+|------|----------------|-----|
+| `plex` | `card0`, `renderD128` | Intel Alder Lake iGPU |
+| `jellyfin` | `/dev/dri` (all) | All available GPUs |
+| `unmanic` | `card1`, `renderD129` | Intel Arc B580 (Xe) |
+
+To override the default GPU assignment:
+
+```bash
+# Point Unmanic at a different GPU
+nomad-pack run packs/unmanic \
+  -var 'gpu_devices=["/dev/dri/card0:/dev/dri/card0", "/dev/dri/renderD128:/dev/dri/renderD128"]'
+
+# Disable GPU entirely
+nomad-pack run packs/unmanic -var gpu_transcoding=false
+```
+
+**Identifying GPUs on the host:**
+
+```bash
+# List available render devices
+ls -la /dev/dri/
+
+# Identify which card is which GPU
+cat /sys/class/drm/card*/device/vendor   # 0x8086 = Intel
+cat /sys/class/drm/card*/device/device   # Cross-reference with PCI IDs
+lspci | grep -i vga
+```
+
+**Intel Arc (Xe) note:** The Intel media driver (iHD) handles both legacy VAAPI and newer Xe architectures. Device passthrough is the same regardless -- the driver inside the container automatically uses the Xe media engine for Arc GPUs. For Unmanic, configure FFmpeg plugins to use `h264_qsv` or `hevc_qsv` (Quick Sync Video) encoders to leverage the hardware.
 
 ## Jellyfin Setup
 
 No special setup required. Jellyfin initializes on first run.
-
-For GPU transcoding, ensure `/dev/dri` exists on the host.
 
 ## SABnzbd Setup
 
@@ -833,6 +877,9 @@ nomad-pack run lidarr --registry=mediaserver
 # Deploy download client
 nomad-pack run sabnzbd --registry=mediaserver
 
+# Deploy media optimizer
+nomad-pack run unmanic --registry=mediaserver
+
 # Deploy request management and monitoring
 nomad-pack run seerr --registry=mediaserver
 nomad-pack run tautulli --registry=mediaserver
@@ -860,6 +907,7 @@ nomad-pack destroy overseerr --registry=mediaserver
 nomad-pack destroy overseerr-reverse-proxy --registry=mediaserver
 nomad-pack destroy tautulli --registry=mediaserver
 nomad-pack destroy sabnzbd --registry=mediaserver
+nomad-pack destroy unmanic --registry=mediaserver
 ```
 
 ## Troubleshooting

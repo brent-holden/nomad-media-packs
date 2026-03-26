@@ -41,7 +41,7 @@ job "[[ var "job_name" . ]]" {
         ports        = ["http"]
         network_mode = "host"
 [[- if var "gpu_transcoding" . ]]
-        devices      = ["/dev/dri/card1:/dev/dri/card1", "/dev/dri/renderD129:/dev/dri/renderD129"]
+        devices      = [[ var "gpu_devices" . | toJson ]]
 [[- end ]]
         volumes      = ["[[ var "cache_path" . ]]:/tmp/unmanic"]
       }

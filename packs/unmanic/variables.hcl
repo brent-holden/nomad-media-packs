@@ -34,6 +34,12 @@ variable "gpu_transcoding" {
   default     = true
 }
 
+variable "gpu_devices" {
+  description = "List of GPU device mappings to pass through (host:container format)"
+  type        = list(string)
+  default     = ["/dev/dri/card1:/dev/dri/card1", "/dev/dri/renderD129:/dev/dri/renderD129"]
+}
+
 variable "unmanic_uid" {
   description = "The UID for the Unmanic user inside the container (PUID)"
   type        = number
