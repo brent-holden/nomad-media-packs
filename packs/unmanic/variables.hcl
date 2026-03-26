@@ -94,6 +94,57 @@ variable "cache_path" {
   default     = "/tmp/unmanic"
 }
 
+# Backup job configuration
+variable "enable_backup" {
+  description = "Enable periodic backup job for Unmanic configuration"
+  type        = bool
+  default     = true
+}
+
+variable "backup_cron_schedule" {
+  description = "Cron schedule for the backup job"
+  type        = string
+  default     = "0 2 * * *"
+}
+
+variable "backup_volume_name" {
+  description = "The name of the CSI volume for backups"
+  type        = string
+  default     = "backup-drive"
+}
+
+variable "backup_retention_days" {
+  description = "Number of days to retain backups"
+  type        = number
+  default     = 14
+}
+
+# Restore job configuration
+variable "enable_restore" {
+  description = "Enable parameterized restore job for Unmanic configuration"
+  type        = bool
+  default     = false
+}
+
+# Update job configuration
+variable "enable_update" {
+  description = "Enable periodic job to fetch latest Unmanic version"
+  type        = bool
+  default     = true
+}
+
+variable "update_cron_schedule" {
+  description = "Cron schedule for the update job"
+  type        = string
+  default     = "0 3 * * *"
+}
+
+variable "nomad_variable_path" {
+  description = "The Nomad variable path to store the version"
+  type        = string
+  default     = "nomad/jobs/unmanic"
+}
+
 variable "register_consul_service" {
   description = "Register the Unmanic service with Consul"
   type        = bool
