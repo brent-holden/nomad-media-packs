@@ -21,15 +21,11 @@ Each pack includes:
 | `sonarr` | Sonarr - TV series collection manager | 8989 |
 | `lidarr` | Lidarr - Music collection manager | 8686 |
 | `prowlarr` | Prowlarr - Indexer manager | 9696 |
-| `seerr` | Seerr - Request management for Plex/Jellyfin/Emby (recommended) | 5055 |
+| `seerr` | Seerr - Request management for Plex/Jellyfin/Emby | 5055 |
 | `seerr-reverse-proxy` | Caddy reverse proxy for Seerr with HTTPS | 80, 443 |
-| `overseerr` | Overseerr - Request management for Plex (legacy) | 5055 |
-| `overseerr-reverse-proxy` | Caddy reverse proxy for Overseerr with HTTPS | 80, 443 |
 | `tautulli` | Tautulli - Plex monitoring and statistics | 8181 |
 | `sabnzbd` | SABnzbd - Usenet download client | 8080 |
 | `unmanic` | Unmanic - Library optimizer for automatic media transcoding | 8888 |
-
-**Note:** Seerr and Overseerr use the same port (5055) and cannot be deployed simultaneously. Seerr is recommended as it supports Jellyfin and Emby in addition to Plex.
 
 ## Prerequisites
 
@@ -131,7 +127,6 @@ nomad-pack run jellyfin --registry=mediaserver
 - Lidarr: http://your-server:8686
 - Prowlarr: http://your-server:9696
 - Seerr: http://your-server:5055 (or https://your-dns-name via reverse proxy)
-- Overseerr: http://your-server:5055 (or https://your-dns-name via reverse proxy)
 - Tautulli: http://your-server:8181
 - SABnzbd: http://your-server:8080
 - Unmanic: http://your-server:8888
@@ -159,7 +154,6 @@ The `deploy-media-server.yml` playbook in [nomad-mediaserver-infra](https://gith
 | Lidarr | `lidarr-config` | Configuration and database |
 | Prowlarr | `prowlarr-config` | Configuration and database |
 | Seerr | `seerr-config` | Configuration and database |
-| Overseerr | `overseerr-config` | Configuration and database |
 | Tautulli | `tautulli-config` | Configuration and database |
 | SABnzbd | `sabnzbd-config` | Configuration and database |
 | Unmanic | `unmanic-config` | Configuration and database |
@@ -361,27 +355,6 @@ All packs default to the same UID (1002) and GID (1001) for consistent file perm
 
 **Note:** The `dns_name` variable is required. The pack will fail to deploy without it.
 
-### Overseerr-Specific Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `overseerr_uid` | UID for Overseerr process (PUID) | `1002` |
-| `overseerr_gid` | GID for Overseerr process (PGID) | `1001` |
-| `port` | Overseerr web interface port | `5055` |
-
-### Overseerr Reverse Proxy Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `dns_name` | DNS name for HTTPS (required) | - |
-| `upstream_address` | Address of Overseerr service | `localhost` |
-| `upstream_port` | Port of Overseerr service | `5055` |
-| `http_port` | HTTP port (redirect to HTTPS) | `80` |
-| `https_port` | HTTPS port | `443` |
-| `config_volume_name` | Overseerr config volume (for co-location) | `overseerr-config` |
-
-**Note:** The reverse proxy requires access to the `overseerr-config` host volume, which forces Nomad to place it on the same node as Overseerr.
-
 ### Tautulli-Specific Variables
 
 | Variable | Description | Default |
@@ -554,16 +527,6 @@ Each pack creates multiple Nomad jobs following the naming convention `{service}
 | `seerr-restore` | batch/parameterized | On-demand restore (if enabled) |
 | `seerr-reverse-proxy` | service | Caddy HTTPS reverse proxy (separate pack) |
 
-### Overseerr Pack
-
-| Job | Type | Description |
-|-----|------|-------------|
-| `overseerr` | service | Main Overseerr service |
-| `overseerr-backup` | batch/periodic | Daily backup (if enabled) |
-| `overseerr-update` | batch/periodic | Daily version check (if enabled) |
-| `overseerr-restore` | batch/parameterized | On-demand restore (if enabled) |
-| `overseerr-reverse-proxy` | service | Caddy HTTPS reverse proxy (separate pack) |
-
 ### Tautulli Pack
 
 | Job | Type | Description |
@@ -606,7 +569,6 @@ The update jobs detect the latest stable version by querying Docker Hub and filt
 | Lidarr | linuxserver/lidarr | `X.X.X.X` | `2.7.1.4417` |
 | Prowlarr | linuxserver/prowlarr | `X.X.X.X` | `1.28.2.4885` |
 | Seerr | seerr/seerr | Docker digest | Tracks `develop` tag digest |
-| Overseerr | linuxserver/overseerr | `X.X.X` | `1.34.1` |
 | Tautulli | linuxserver/tautulli | `X.X.X` | `2.15.0` |
 | SABnzbd | linuxserver/sabnzbd | `X.X.X` | `4.4.1` |
 
@@ -655,7 +617,6 @@ nomad-pack run radarr --registry=mediaserver -var enable_update=false
 - **Lidarr**: `lidarr.db`, `config.xml`, `Backups/*`
 - **Prowlarr**: `prowlarr.db`, `config.xml`, `Backups/*`
 - **Seerr**: `db/db.sqlite3`, `settings.json`
-- **Overseerr**: `db/db.sqlite3`, `settings.json`
 - **Tautulli**: `tautulli.db`, `config.ini`, `backups/*`
 - **SABnzbd**: `sabnzbd.ini`, `sabnzbd.db`, `admin/*`
 
@@ -709,7 +670,7 @@ nomad-pack run radarr --registry=mediaserver \
 **Available restore jobs:**
 - `plex-restore`, `jellyfin-restore`
 - `radarr-restore`, `sonarr-restore`, `lidarr-restore`, `prowlarr-restore`
-- `seerr-restore`, `overseerr-restore`, `tautulli-restore`, `sabnzbd-restore`
+- `seerr-restore`, `tautulli-restore`, `sabnzbd-restore`
 
 See [nomad-mediaserver-infra](https://github.com/brent-holden/nomad-mediaserver-infra) for the Ansible playbooks that handle this workflow automatically.
 
@@ -851,7 +812,7 @@ All services mount the media volume at `/media`. Configure paths as:
 Each *arr app generates an API key on first run. Find it at:
 - **Settings → General → Security → API Key**
 
-You'll need these API keys when connecting services (e.g., adding Radarr to Prowlarr or Overseerr).
+You'll need these API keys when connecting services (e.g., adding Radarr to Prowlarr or Seerr).
 
 ## Deploying the Full Stack
 
@@ -903,8 +864,6 @@ nomad-pack destroy lidarr --registry=mediaserver
 nomad-pack destroy prowlarr --registry=mediaserver
 nomad-pack destroy seerr --registry=mediaserver
 nomad-pack destroy seerr-reverse-proxy --registry=mediaserver
-nomad-pack destroy overseerr --registry=mediaserver
-nomad-pack destroy overseerr-reverse-proxy --registry=mediaserver
 nomad-pack destroy tautulli --registry=mediaserver
 nomad-pack destroy sabnzbd --registry=mediaserver
 nomad-pack destroy unmanic --registry=mediaserver
