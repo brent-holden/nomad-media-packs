@@ -118,6 +118,11 @@ variable "update_cron_schedule" {
   default     = "0 3 * * *"
 }
 
+variable "secret_encryption_key" {
+  description = "Secret used to encrypt secrets in Homarr database (64 char hex string). Generate with: openssl rand -hex 32"
+  type        = string
+}
+
 variable "nomad_variable_path" {
   description = "The Nomad variable path to store the version"
   type        = string

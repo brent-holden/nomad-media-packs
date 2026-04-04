@@ -45,6 +45,7 @@ job "[[ var "job_name" . ]]" {
 TZ=[[ var "timezone" . ]]
 PUID=[[ var "homarr_uid" . ]]
 PGID=[[ var "homarr_gid" . ]]
+SECRET_ENCRYPTION_KEY=[[ var "secret_encryption_key" . ]]
 DOCKER_IMAGE_VERSION={{- with nomadVar "[[ var "nomad_variable_path" . ]]" -}}{{ .version }}{{- end }}
 EOH
         destination = "local/env_vars"
