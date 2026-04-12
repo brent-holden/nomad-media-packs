@@ -43,7 +43,13 @@ job "[[ var "job_name" . ]]" {
 [[- if var "gpu_transcoding" . ]]
         devices      = [[ var "gpu_devices" . | toJson ]]
 [[- end ]]
-        volumes      = ["[[ var "cache_path" . ]]:/tmp/unmanic"]
+        volumes      = [
+          "[[ var "cache_path" . ]]:/tmp/unmanic",
+[[- if var "gpu_transcoding" . ]]
+          "/usr/lib64/dri/iHD_drv_video.so:/usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so:ro",
+          "/usr/lib64/libigdgmm.so.12.9.0:/usr/lib/x86_64-linux-gnu/libigdgmm.so.12:ro",
+[[- end ]]
+        ]
       }
 
       volume_mount {
