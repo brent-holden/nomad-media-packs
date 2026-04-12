@@ -71,6 +71,48 @@ sudo igsc fw update --device /dev/mei1 --image bmg_g21_fwupdate.bin -a
 sudo reboot
 ```
 
+## GPU Monitoring
+
+The Arc B580 uses Intel's `xe` kernel driver rather than the older `i915` driver. This means `intel_gpu_top` does not work (`"Xe devices are not supported"`), and `nvtop` requires additional permissions to report utilization.
+
+### Setting up nvtop
+
+nvtop 3.2.0+ supports the `xe` driver, but needs Linux capabilities and group membership to read GPU metrics and process info:
+
+```bash
+# Grant capabilities (persists across reboots, but resets on package upgrade)
+sudo setcap 'cap_perfmon,cap_sys_ptrace,cap_sys_admin=ep' /usr/bin/nvtop
+
+# Add your user to the video group (for VRAM reporting via /dev/dri/card1)
+sudo usermod -aG video $USER
+
+# Log out and back in, then run nvtop normally
+nvtop
+```
+
+What each capability does:
+
+| Capability | Purpose |
+|------------|---------|
+| `cap_perfmon` | Access GPU performance counters |
+| `cap_sys_admin` | Read DRM driver utilization metrics |
+| `cap_sys_ptrace` | Read fdinfo of processes owned by other users (e.g. `plex`) |
+| `video` group | Access `/dev/dri/card1` for VRAM total/used reporting |
+
+Without these, nvtop will show the GPU name but all utilization and process fields will be null.
+
+### Verifying GPU usage
+
+```bash
+# Snapshot mode (useful for scripting)
+nvtop -s
+
+# Check encode/decode engine utilization — should show ~100% during active transcodes
+# Individual FFmpeg processes will show per-process encode_decode percentages
+```
+
+The `gpu_util` field will report 0% during transcoding — this is normal. QSV encoding uses the dedicated **Video** and **VideoEnhance** engines, not the Render/3D engine. The `encode_decode` field is the correct metric to watch.
+
 ## Usage
 
 ```bash

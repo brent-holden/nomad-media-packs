@@ -724,6 +724,8 @@ lspci | grep -i vga
 
 **Intel Arc (Xe) note:** The Intel media driver (iHD) handles both legacy VAAPI and newer Xe architectures. Device passthrough is the same regardless -- the driver inside the container automatically uses the Xe media engine for Arc GPUs. For Unmanic, configure FFmpeg plugins to use `h264_qsv` or `hevc_qsv` (Quick Sync Video) encoders to leverage the hardware.
 
+**GPU monitoring:** The Arc B580 uses the `xe` kernel driver, which is not supported by `intel_gpu_top`. Use `nvtop` 3.2.0+ with additional Linux capabilities for monitoring. See the [Unmanic README](packs/unmanic/README.md#gpu-monitoring) for setup instructions.
+
 ## Jellyfin Setup
 
 No special setup required. Jellyfin initializes on first run.
