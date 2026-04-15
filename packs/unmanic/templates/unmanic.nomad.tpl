@@ -38,6 +38,7 @@ job "[[ var "job_name" . ]]" {
 
       config {
         image        = "[[ var "image" . ]]"
+        force_pull   = true
         ports        = ["http"]
         network_mode = "host"
 [[- if var "gpu_transcoding" . ]]
