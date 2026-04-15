@@ -58,18 +58,7 @@ if [ -z "$TAG" ]; then
     exit 1
 fi
 
-echo "Latest linuxserver/jellyfin tag: $TAG"
-
-# Fetch the amd64 image digest for this tag
-CONTAINER_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/jellyfin/tags/$TAG" | \
-    jq -r '.images[] | select(.architecture == "amd64") | .digest // empty')
-
-if [ -z "$CONTAINER_VERSION" ]; then
-    echo "Error: Failed to find amd64 image digest for tag $TAG"
-    exit 1
-fi
-
-echo "amd64 image digest: $CONTAINER_VERSION"
+echo "Latest linuxserver/jellyfin version: $TAG"
 
 # Fetch and install latest Nomad CLI
 echo "Fetching latest Nomad version..."
@@ -80,9 +69,9 @@ unzip -q /tmp/nomad.zip -d /tmp/
 chmod +x /tmp/nomad
 
 echo "Writing version to Nomad variable..."
-/tmp/nomad var put -force [[ var "nomad_variable_path" . ]] version="$CONTAINER_VERSION"
+/tmp/nomad var put -force [[ var "nomad_variable_path" . ]] version="$TAG"
 
-echo "Successfully updated Nomad variable [[ var "nomad_variable_path" . ]] with container version: $CONTAINER_VERSION"
+echo "Successfully updated Nomad variable [[ var "nomad_variable_path" . ]] with container version: $TAG"
 EOF
         destination = "local/update-jellyfin-version.sh"
         perms       = "0755"

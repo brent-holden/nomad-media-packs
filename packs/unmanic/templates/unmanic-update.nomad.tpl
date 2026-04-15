@@ -43,25 +43,27 @@ echo "Fetching latest Unmanic container version..."
 
 apt-get update -qq && apt-get install -y -qq curl jq unzip > /dev/null 2>&1
 
-# Fetch the amd64 image digest for the latest tag from Docker Hub
-VERSION=$(curl -s "https://hub.docker.com/v2/repositories/josh5/unmanic/tags/latest" | \
-    jq -r '.images[] | select(.architecture == "amd64") | .digest // empty')
+# Fetch latest stable container version from Docker Hub
+TAG=$(curl -s "https://hub.docker.com/v2/repositories/josh5/unmanic/tags?page_size=100" | \
+    jq -r '.results[].name' | \
+    grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | \
+    head -1)
 
-if [ -z "$VERSION" ]; then
-    echo "Error: Failed to find amd64 image digest for josh5/unmanic:latest"
+if [ -z "$TAG" ]; then
+    echo "Error: Failed to find stable container tag from Docker Hub"
     exit 1
 fi
 
-echo "amd64 image digest: $VERSION"
+echo "Latest josh5/unmanic version: $TAG"
 
 NOMAD_VERSION=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/nomad | jq -r '.current_version')
 curl -sL "https://releases.hashicorp.com/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip" -o /tmp/nomad.zip
 unzip -q /tmp/nomad.zip -d /tmp/
 chmod +x /tmp/nomad
 
-/tmp/nomad var put -force [[ var "nomad_variable_path" . ]] version="$VERSION"
+/tmp/nomad var put -force [[ var "nomad_variable_path" . ]] version="$TAG"
 
-echo "Updated Nomad variable with container digest: $VERSION"
+echo "Updated Nomad variable with container version: $TAG"
 EOF
         destination = "local/update.sh"
         perms       = "0755"

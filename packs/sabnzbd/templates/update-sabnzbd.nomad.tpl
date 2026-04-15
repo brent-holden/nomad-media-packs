@@ -45,17 +45,19 @@ echo "Starting SABnzbd version update job..."
 echo "Installing curl, jq, and unzip..."
 apt-get update -qq && apt-get install -y -qq curl jq unzip > /dev/null 2>&1
 
-# Fetch the amd64 image digest for the latest tag from Docker Hub
-echo "Fetching SABnzbd container image digest from Docker Hub..."
-CONTAINER_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/sabnzbd/tags/latest" | \
-    jq -r '.images[] | select(.architecture == "amd64") | .digest // empty')
+# Fetch latest stable container version from Docker Hub
+echo "Fetching latest SABnzbd container version from Docker Hub..."
+TAG=$(curl -s "https://hub.docker.com/v2/repositories/linuxserver/sabnzbd/tags?page_size=100" | \
+    jq -r '.results[].name' | \
+    grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | \
+    head -1)
 
-if [ -z "$CONTAINER_VERSION" ] || [ "$CONTAINER_VERSION" = "null" ]; then
-    echo "Error: Failed to find amd64 image digest from Docker Hub"
+if [ -z "$TAG" ]; then
+    echo "Error: Failed to find stable container tag from Docker Hub"
     exit 1
 fi
 
-echo "Latest linuxserver/sabnzbd:latest amd64 image digest: $CONTAINER_VERSION"
+echo "Latest linuxserver/sabnzbd version: $TAG"
 
 # Fetch and install latest Nomad CLI
 echo "Fetching latest Nomad version..."
@@ -66,9 +68,9 @@ unzip -q /tmp/nomad.zip -d /tmp/
 chmod +x /tmp/nomad
 
 echo "Writing version to Nomad variable..."
-/tmp/nomad var put -force [[ var "nomad_variable_path" . ]] version="$CONTAINER_VERSION"
+/tmp/nomad var put -force [[ var "nomad_variable_path" . ]] version="$TAG"
 
-echo "Successfully updated Nomad variable [[ var "nomad_variable_path" . ]] with container version: $CONTAINER_VERSION"
+echo "Successfully updated Nomad variable [[ var "nomad_variable_path" . ]] with container version: $TAG"
 EOF
         destination = "local/update-sabnzbd-version.sh"
         perms       = "0755"

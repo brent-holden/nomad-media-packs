@@ -55,25 +55,14 @@ fi
 
 echo "Latest seerr release: $TAG"
 
-# Fetch the amd64 image digest for this tag from Docker Hub
-VERSION=$(curl -s "https://hub.docker.com/v2/repositories/seerr/seerr/tags/$TAG" | \
-    jq -r '.images[] | select(.architecture == "amd64") | .digest // empty')
-
-if [ -z "$VERSION" ]; then
-    echo "Error: Failed to find amd64 image digest for tag $TAG"
-    exit 1
-fi
-
-echo "amd64 image digest: $VERSION"
-
 NOMAD_VERSION=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/nomad | jq -r '.current_version')
 curl -sL "https://releases.hashicorp.com/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip" -o /tmp/nomad.zip
 unzip -q /tmp/nomad.zip -d /tmp/
 chmod +x /tmp/nomad
 
-/tmp/nomad var put -force [[ var "nomad_variable_path" . ]] version="$VERSION"
+/tmp/nomad var put -force [[ var "nomad_variable_path" . ]] version="$TAG"
 
-echo "Updated Nomad variable with container digest: $VERSION"
+echo "Updated Nomad variable with container version: $TAG"
 EOF
         destination = "local/update.sh"
         perms       = "0755"
