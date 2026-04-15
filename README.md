@@ -23,6 +23,7 @@ Each pack includes:
 | `prowlarr` | Prowlarr - Indexer manager | 9696 |
 | `seerr` | Seerr - Request management for Plex/Jellyfin/Emby | 5055 |
 | `seerr-reverse-proxy` | Caddy reverse proxy for Seerr with HTTPS | 80, 443 |
+| `homarr` | Homarr - Modern homelab dashboard | 7575 |
 | `tautulli` | Tautulli - Plex monitoring and statistics | 8181 |
 | `sabnzbd` | SABnzbd - Usenet download client | 8080 |
 | `unmanic` | Unmanic - Library optimizer for automatic media transcoding | 8888 |
@@ -127,6 +128,7 @@ nomad-pack run jellyfin --registry=mediaserver
 - Lidarr: http://your-server:8686
 - Prowlarr: http://your-server:9696
 - Seerr: http://your-server:5055 (or https://your-dns-name via reverse proxy)
+- Homarr: http://your-server:7575
 - Tautulli: http://your-server:8181
 - SABnzbd: http://your-server:8080
 - Unmanic: http://your-server:8888
@@ -154,6 +156,7 @@ The `deploy-media-server.yml` playbook in [nomad-mediaserver-infra](https://gith
 | Lidarr | `lidarr-config` | Configuration and database |
 | Prowlarr | `prowlarr-config` | Configuration and database |
 | Seerr | `seerr-config` | Configuration and database |
+| Homarr | `homarr-config` | Configuration and database |
 | Tautulli | `tautulli-config` | Configuration and database |
 | SABnzbd | `sabnzbd-config` | Configuration and database |
 | Unmanic | `unmanic-config` | Configuration and database |
@@ -340,7 +343,7 @@ All packs default to the same UID (1002) and GID (1001) for consistent file perm
 | `seerr_uid` | UID for Seerr process | `1002` |
 | `seerr_gid` | GID for Seerr process | `1001` |
 | `port` | Seerr web interface port | `5055` |
-| `image` | Container image | `docker.io/seerr/seerr:develop` |
+| `image` | Container image | `docker.io/seerr/seerr:latest` |
 
 ### Seerr Reverse Proxy Variables
 
@@ -354,6 +357,15 @@ All packs default to the same UID (1002) and GID (1001) for consistent file perm
 | `config_volume_name` | Seerr config volume (for co-location) | `seerr-config` |
 
 **Note:** The `dns_name` variable is required. The pack will fail to deploy without it.
+
+### Homarr-Specific Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `homarr_uid` | UID for Homarr process (PUID) | `1002` |
+| `homarr_gid` | GID for Homarr process (PGID) | `1001` |
+| `port` | Homarr web interface port | `7575` |
+| `secret_encryption_key` | Encryption key for Homarr database (64 char hex). Generate with `openssl rand -hex 32` | (required) |
 
 ### Tautulli-Specific Variables
 
@@ -545,6 +557,23 @@ Each pack creates multiple Nomad jobs following the naming convention `{service}
 | `sabnzbd-update` | batch/periodic | Daily version check (if enabled) |
 | `sabnzbd-restore` | batch/parameterized | On-demand restore (if enabled) |
 
+### Unmanic Pack
+
+| Job | Type | Description |
+|-----|------|-------------|
+| `unmanic` | service | Main Unmanic service |
+| `unmanic-backup` | batch/periodic | Daily backup (if enabled) |
+| `unmanic-update` | batch/periodic | Daily version check (if enabled) |
+| `unmanic-restore` | batch/parameterized | On-demand restore (if enabled) |
+
+### Homarr Pack
+
+| Job | Type | Description |
+|-----|------|-------------|
+| `homarr` | service | Main Homarr dashboard |
+| `homarr-backup` | batch/periodic | Daily backup (if enabled) |
+| `homarr-update` | batch/periodic | Daily version check (if enabled) |
+
 ## Automatic Updates
 
 Each pack includes an optional update job that periodically checks for new container versions and stores the latest version in a Nomad variable. This allows the main service job to reference `{{ with nomadVar }}` for automated updates.
@@ -568,9 +597,11 @@ The update jobs detect the latest stable version by querying Docker Hub and filt
 | Sonarr | linuxserver/sonarr | `X.X.X.X` | `4.0.11.2680` |
 | Lidarr | linuxserver/lidarr | `X.X.X.X` | `2.7.1.4417` |
 | Prowlarr | linuxserver/prowlarr | `X.X.X.X` | `1.28.2.4885` |
-| Seerr | seerr/seerr | Docker digest | Tracks `develop` tag digest |
+| Seerr | GitHub releases (seerr-team/seerr) | `X.X.X` | `1.0.0` |
 | Tautulli | linuxserver/tautulli | `X.X.X` | `2.15.0` |
 | SABnzbd | linuxserver/sabnzbd | `X.X.X` | `4.4.1` |
+| Unmanic | josh5/unmanic | `X.X.X` | `0.2.6` |
+| Homarr | GitHub releases (homarr-labs/homarr) | `X.X.X` | `1.0.0` |
 
 **Note:** Plex uses the official Plex API at `plex.tv` to get the latest version, not the linuxserver container image.
 
@@ -588,7 +619,7 @@ EOH
 }
 ```
 
-When the update job writes a new version to the Nomad variable, the rendered template changes. Nomad detects this change and restarts the task, which pulls the latest container image. The services use the `:latest` tag by default, so the version variable acts as a trigger for the restart rather than specifying the exact image tag.
+When the update job writes a new version to the Nomad variable, the rendered template changes. Nomad detects this change and restarts the task. All service templates include `force_pull = true` in their Podman config, which ensures the container runtime always pulls the latest image on restart rather than using a cached version. The services use the `:latest` tag by default, so the version variable acts as a trigger for the restart rather than specifying the exact image tag.
 
 ### Checking Current Version
 
@@ -619,6 +650,8 @@ nomad-pack run radarr --registry=mediaserver -var enable_update=false
 - **Seerr**: `db/db.sqlite3`, `settings.json`
 - **Tautulli**: `tautulli.db`, `config.ini`, `backups/*`
 - **SABnzbd**: `sabnzbd.ini`, `sabnzbd.db`, `admin/*`
+- **Unmanic**: `unmanic.db`, `settings.json`, `plugins/*`
+- **Homarr**: Full `appdata/` directory
 
 Backups are stored in the backup CSI volume at `/{service}/YYYY-MM-DD/`.
 
@@ -670,7 +703,7 @@ nomad-pack run radarr --registry=mediaserver \
 **Available restore jobs:**
 - `plex-restore`, `jellyfin-restore`
 - `radarr-restore`, `sonarr-restore`, `lidarr-restore`, `prowlarr-restore`
-- `seerr-restore`, `tautulli-restore`, `sabnzbd-restore`
+- `seerr-restore`, `tautulli-restore`, `sabnzbd-restore`, `unmanic-restore`
 
 See [nomad-mediaserver-infra](https://github.com/brent-holden/nomad-mediaserver-infra) for the Ansible playbooks that handle this workflow automatically.
 
@@ -774,7 +807,8 @@ The *arr apps (Radarr, Sonarr, Lidarr, Prowlarr) work together with SABnzbd as a
 4. **Sonarr** - TV series management (connect to Prowlarr + SABnzbd)
 5. **Lidarr** - Music management (connect to Prowlarr + SABnzbd)
 6. **Seerr** - Request management (connect to Plex/Jellyfin/Emby + Radarr/Sonarr)
-7. **Tautulli** - Plex monitoring (connect to Plex)
+7. **Homarr** - Dashboard (add links to all services)
+8. **Tautulli** - Plex monitoring (connect to Plex)
 
 ### Service Connections
 
@@ -843,6 +877,10 @@ nomad-pack run sabnzbd --registry=mediaserver
 # Deploy media optimizer
 nomad-pack run unmanic --registry=mediaserver
 
+# Deploy dashboard
+nomad-pack run homarr --registry=mediaserver \
+  --var secret_encryption_key="$(openssl rand -hex 32)"
+
 # Deploy request management and monitoring
 nomad-pack run seerr --registry=mediaserver
 nomad-pack run tautulli --registry=mediaserver
@@ -866,6 +904,7 @@ nomad-pack destroy lidarr --registry=mediaserver
 nomad-pack destroy prowlarr --registry=mediaserver
 nomad-pack destroy seerr --registry=mediaserver
 nomad-pack destroy seerr-reverse-proxy --registry=mediaserver
+nomad-pack destroy homarr --registry=mediaserver
 nomad-pack destroy tautulli --registry=mediaserver
 nomad-pack destroy sabnzbd --registry=mediaserver
 nomad-pack destroy unmanic --registry=mediaserver
