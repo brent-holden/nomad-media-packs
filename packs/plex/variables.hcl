@@ -37,7 +37,7 @@ variable "gpu_transcoding" {
 variable "gpu_devices" {
   description = "List of GPU device mappings to pass through (host:container format)"
   type        = list(string)
-  default     = ["/dev/dri/card0:/dev/dri/card0", "/dev/dri/renderD128:/dev/dri/renderD128"]
+  default     = ["/dev/dri/by-path/pci-0000:00:02.0-card", "/dev/dri/by-path/pci-0000:00:02.0-render", "/dev/dri/by-path/pci-0000:03:00.0-card", "/dev/dri/by-path/pci-0000:03:00.0-render"]
 }
 
 variable "plex_uid" {

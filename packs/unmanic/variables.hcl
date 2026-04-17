@@ -29,7 +29,7 @@ variable "image" {
 }
 
 variable "gpu_transcoding" {
-  description = "Enable GPU passthrough for hardware transcoding (Intel B580 on /dev/dri/card1)"
+  description = "Enable GPU passthrough for hardware transcoding (Intel Arc B580 via stable PCI path)"
   type        = bool
   default     = true
 }
@@ -37,7 +37,7 @@ variable "gpu_transcoding" {
 variable "gpu_devices" {
   description = "List of GPU device mappings to pass through (host:container format)"
   type        = list(string)
-  default     = ["/dev/dri/card1:/dev/dri/card1", "/dev/dri/renderD129:/dev/dri/renderD129"]
+  default     = ["/dev/dri/by-path/pci-0000:03:00.0-card", "/dev/dri/by-path/pci-0000:03:00.0-render"]
 }
 
 variable "unmanic_uid" {
@@ -155,4 +155,10 @@ variable "consul_service_name" {
   description = "The name to register with Consul"
   type        = string
   default     = "unmanic"
+}
+
+variable "use_tmpfs_cache" {
+  description = "Use tmpfs for the transcode cache instead of a host bind mount. Prevents XFS journal hangs if the container is killed mid-transcode."
+  type        = bool
+  default     = true
 }
