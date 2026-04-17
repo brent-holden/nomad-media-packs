@@ -37,7 +37,7 @@ variable "gpu_transcoding" {
 variable "gpu_devices" {
   description = "List of GPU device mappings to pass through (host:container format)"
   type        = list(string)
-  default     = ["/dev/dri/by-path/pci-0000:03:00.0-card", "/dev/dri/by-path/pci-0000:03:00.0-render"]
+  default     = ["/dev/dri/arc-b580", "/dev/dri/arc-b580-render"]
 }
 
 variable "unmanic_uid" {
