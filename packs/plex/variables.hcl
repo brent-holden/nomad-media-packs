@@ -67,7 +67,7 @@ variable "cpu" {
 variable "memory" {
   description = "The memory resources to allocate (MB)"
   type        = number
-  default     = 16384
+  default     = 4096
 }
 
 variable "port" {
