@@ -284,8 +284,8 @@ All packs default to the same UID (1002) and GID (1001) for consistent file perm
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `cpu` | CPU allocation (MHz) | `16000` |
-| `memory` | Memory allocation (MB) | `16384` |
+| `cpu` | CPU allocation (MHz) | Pack-specific |
+| `memory` | Memory allocation (MB) | Pack-specific |
 
 ### Plex-Specific Variables
 
@@ -390,7 +390,8 @@ All packs default to the same UID (1002) and GID (1001) for consistent file perm
 | `unmanic_uid` | UID for Unmanic process (PUID) | `1002` |
 | `unmanic_gid` | GID for Unmanic process (PGID) | `1001` |
 | `port` | Unmanic web interface port | `8888` |
-| `cache_path` | Host path for encoding cache (`/tmp/unmanic`) | `/tmp/unmanic` |
+| `cache_path` | Host path for encoding cache (only used when `use_tmpfs_cache=false`) | `/tmp/unmanic` |
+| `use_tmpfs_cache` | Use tmpfs for transcode cache instead of host bind mount (prevents XFS journal hangs) | `true` |
 
 ### Backup/Update Variables
 
@@ -728,20 +729,35 @@ Each pack has different defaults based on the intended GPU assignment:
 
 | Pack | Default Devices | GPU |
 |------|----------------|-----|
-| `plex` | `card0`, `renderD128` | Intel Alder Lake iGPU |
+| `plex` | `igpu`, `igpu-render`, `arc-b580`, `arc-b580-render` | Both GPUs (via udev symlinks) |
 | `jellyfin` | `/dev/dri` (all) | All available GPUs |
-| `unmanic` | `card1`, `renderD129` | Intel Arc B580 (Xe) |
+| `unmanic` | `arc-b580`, `arc-b580-render` | Intel Arc B580 (via udev symlinks) |
 
 To override the default GPU assignment:
 
 ```bash
-# Point Unmanic at a different GPU
+# Point Unmanic at a different GPU (use udev symlinks for stability)
 nomad-pack run packs/unmanic \
-  -var 'gpu_devices=["/dev/dri/card0:/dev/dri/card0", "/dev/dri/renderD128:/dev/dri/renderD128"]'
+  -var 'gpu_devices=["/dev/dri/igpu", "/dev/dri/igpu-render"]'
 
 # Disable GPU entirely
 nomad-pack run packs/unmanic -var gpu_transcoding=false
 ```
+
+**GPU device stability:** GPU device numbers (`card0`, `renderD128`) can swap on reboot. Use udev symlinks for stable mapping. Create `/etc/udev/rules.d/99-gpu-symlinks.rules`:
+
+```bash
+# Intel Arc B580 (PCI 03:00.0)
+SUBSYSTEM=="drm", KERNEL=="card*", KERNELS=="0000:03:00.0", SYMLINK+="dri/arc-b580"
+SUBSYSTEM=="drm", KERNEL=="renderD*", KERNELS=="0000:03:00.0", SYMLINK+="dri/arc-b580-render"
+# Intel UHD 770 iGPU (PCI 00:02.0)
+SUBSYSTEM=="drm", KERNEL=="card*", KERNELS=="0000:00:02.0", SYMLINK+="dri/igpu"
+SUBSYSTEM=="drm", KERNEL=="renderD*", KERNELS=="0000:00:02.0", SYMLINK+="dri/igpu-render"
+```
+
+Then reload: `sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=drm`
+
+> **Note:** Do not use `/dev/dri/by-path/` symlinks in Nomad — the colons in PCI paths (e.g., `pci-0000:03:00.0`) conflict with the `host:container` device mapping syntax.
 
 **Identifying GPUs on the host:**
 
