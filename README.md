@@ -27,6 +27,7 @@ Each pack includes:
 | `tautulli` | Tautulli - Plex monitoring and statistics | 8181 |
 | `sabnzbd` | SABnzbd - Usenet download client | 8080 |
 | `unmanic` | Unmanic - Library optimizer for automatic media transcoding | 8888 |
+| `doplarr` | Doplarr - Discord/Slack bot for requesting media through *arr backends | 3000 (Slack) |
 
 ## Prerequisites
 
@@ -393,6 +394,72 @@ All packs default to the same UID (1002) and GID (1001) for consistent file perm
 | `cache_path` | Host path for encoding cache (only used when `use_tmpfs_cache=false`) | `/tmp/unmanic` |
 | `use_tmpfs_cache` | Use tmpfs for transcode cache instead of host bind mount (prevents XFS journal hangs) | `true` |
 
+### Doplarr-Specific Variables
+
+Doplarr is a Discord/Slack bot for requesting media through Radarr, Sonarr, and Seerr. Unlike other packs, it has no persistent config volume — configuration is passed entirely via environment variables.
+
+**Sensitive tokens** (Discord token, Slack bot token, Slack signing secret) are stored in Nomad variables and injected at runtime, keeping them out of job specs.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `discord_token` | Discord bot token (set via Nomad variable, see below) | `""` |
+| `slack_bot_token` | Slack bot token (set via Nomad variable, see below) | `""` |
+| `slack_signing_secret` | Slack signing secret (set via Nomad variable, see below) | `""` |
+| `slack_port` | Slack HTTP server port | `3000` |
+| `expose_slack_port` | Expose the Slack port (required when using Slack) | `false` |
+| `radarr_url` | Radarr URL | `""` |
+| `radarr_api_key` | Radarr API key | `""` |
+| `radarr_media` | Slash command name for Radarr | `movie` |
+| `sonarr_url` | Sonarr URL | `""` |
+| `sonarr_api_key` | Sonarr API key | `""` |
+| `sonarr_media` | Slash command name for Sonarr | `series` |
+| `seerr_url` | Seerr URL | `""` |
+| `seerr_api_key` | Seerr admin API key | `""` |
+| `seerr_media` | Slash command name for Seerr | `media` |
+
+#### Deploying Doplarr
+
+**Step 1: Store secrets in Nomad variables**
+
+```bash
+# For Discord:
+nomad var put nomad/jobs/doplarr discord_token="YOUR_DISCORD_BOT_TOKEN"
+
+# For Slack:
+nomad var put nomad/jobs/doplarr slack_bot_token="xoxb-YOUR-TOKEN" slack_signing_secret="YOUR_SECRET"
+
+# For both (Discord + Slack simultaneously):
+nomad var put nomad/jobs/doplarr \
+  discord_token="YOUR_DISCORD_BOT_TOKEN" \
+  slack_bot_token="xoxb-YOUR-TOKEN" \
+  slack_signing_secret="YOUR_SECRET"
+```
+
+**Step 2: Deploy with your backend configuration**
+
+```bash
+# Discord + Radarr + Sonarr
+nomad-pack run doplarr \
+  --var radarr_url=http://radarr:7878 \
+  --var radarr_api_key=YOUR_RADARR_KEY \
+  --var sonarr_url=http://sonarr:8989 \
+  --var sonarr_api_key=YOUR_SONARR_KEY
+
+# Slack + Seerr (with port exposed)
+nomad-pack run doplarr \
+  --var expose_slack_port=true \
+  --var seerr_url=http://seerr:5055 \
+  --var seerr_api_key=YOUR_SEERR_KEY \
+  --var seerr_fallback_user_id=1
+```
+
+**Step 3: Verify**
+
+```bash
+nomad job status doplarr
+nomad alloc logs -job doplarr
+```
+
 ### Backup/Update Variables
 
 | Variable | Description | Default |
@@ -574,6 +641,12 @@ Each pack creates multiple Nomad jobs following the naming convention `{service}
 | `homarr` | service | Main Homarr dashboard |
 | `homarr-backup` | batch/periodic | Daily backup (if enabled) |
 | `homarr-update` | batch/periodic | Daily version check (if enabled) |
+
+### Doplarr Pack
+
+| Job | Type | Description |
+|-----|------|-------------|
+| `doplarr` | service | Discord/Slack media request bot |
 
 ## Automatic Updates
 
