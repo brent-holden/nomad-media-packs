@@ -74,22 +74,10 @@ variable "slack_bot_token" {
   default     = ""
 }
 
-variable "slack_signing_secret" {
-  description = "Slack app signing secret. Required when using Slack."
+variable "slack_app_token" {
+  description = "Slack app-level token with connections:write scope (xapp-...). Required when using Slack."
   type        = string
   default     = ""
-}
-
-variable "slack_port" {
-  description = "Port for the Slack HTTP server"
-  type        = number
-  default     = 3000
-}
-
-variable "expose_slack_port" {
-  description = "Expose the Slack HTTP port (required when using Slack)"
-  type        = bool
-  default     = false
 }
 
 // --- Radarr ---

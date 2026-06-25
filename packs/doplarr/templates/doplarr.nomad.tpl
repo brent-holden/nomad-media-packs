@@ -9,11 +9,6 @@ job "[[ var "job_name" . ]]" {
 
     network {
       mode = "host"
-[[- if var "expose_slack_port" . ]]
-      port "slack" {
-        static = [[ var "slack_port" . ]]
-      }
-[[- end ]]
     }
 
     task "doplarr" {
@@ -28,9 +23,6 @@ job "[[ var "job_name" . ]]" {
         image        = "[[ var "image" . ]]"
         force_pull   = true
         network_mode = "host"
-[[- if var "expose_slack_port" . ]]
-        ports        = ["slack"]
-[[- end ]]
       }
 
       template {
@@ -42,16 +34,12 @@ PUBLIC_FOLLOWUP=[[ var "public_followup" . ]]
 # Platform tokens are read from Nomad variables so they stay out of job specs.
 # Set them with:
 #   nomad var put nomad/jobs/doplarr discord_token="YOUR_TOKEN"
-#   nomad var put nomad/jobs/doplarr slack_bot_token="xoxb-..." slack_signing_secret="..."
+#   nomad var put nomad/jobs/doplarr slack_bot_token="xoxb-..." slack_app_token="xapp-..."
 {{- with nomadVar "nomad/jobs/doplarr" }}
 {{ if .discord_token }}DISCORD__TOKEN={{ .discord_token }}{{ end }}
 {{ if .slack_bot_token }}SLACK__BOT_TOKEN={{ .slack_bot_token }}{{ end }}
-{{ if .slack_signing_secret }}SLACK__SIGNING_SECRET={{ .slack_signing_secret }}{{ end }}
+{{ if .slack_app_token }}SLACK__APP_TOKEN={{ .slack_app_token }}{{ end }}
 {{- end }}
-
-[[- if ne (var "slack_bot_token" .) "" ]]
-SLACK__PORT=[[ var "slack_port" . ]]
-[[- end ]]
 
 [[- if ne (var "radarr_url" .) "" ]]
 RADARR__URL=[[ var "radarr_url" . ]]
@@ -117,15 +105,6 @@ EOH
 [[- if var "register_consul_service" . ]]
       service {
         name = "[[ var "consul_service_name" . ]]"
-[[- if var "expose_slack_port" . ]]
-        port = "slack"
-
-        check {
-          type     = "tcp"
-          interval = "30s"
-          timeout  = "10s"
-        }
-[[- end ]]
       }
 [[- end ]]
     }

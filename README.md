@@ -398,15 +398,13 @@ All packs default to the same UID (1002) and GID (1001) for consistent file perm
 
 Doplarr is a Discord/Slack bot for requesting media through Radarr, Sonarr, and Seerr. Unlike other packs, it has no persistent config volume — configuration is passed entirely via environment variables.
 
-**Sensitive tokens** (Discord token, Slack bot token, Slack signing secret) are stored in Nomad variables and injected at runtime, keeping them out of job specs.
+**Sensitive tokens** (Discord token, Slack bot/app tokens) are stored in Nomad variables and injected at runtime, keeping them out of job specs. Slack uses Socket Mode (outbound WebSocket) — no ports to expose.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `discord_token` | Discord bot token (set via Nomad variable, see below) | `""` |
 | `slack_bot_token` | Slack bot token (set via Nomad variable, see below) | `""` |
-| `slack_signing_secret` | Slack signing secret (set via Nomad variable, see below) | `""` |
-| `slack_port` | Slack HTTP server port | `3000` |
-| `expose_slack_port` | Expose the Slack port (required when using Slack) | `false` |
+| `slack_app_token` | Slack app-level token with `connections:write` scope (set via Nomad variable) | `""` |
 | `radarr_url` | Radarr URL | `""` |
 | `radarr_api_key` | Radarr API key | `""` |
 | `radarr_media` | Slash command name for Radarr | `movie` |
@@ -426,13 +424,13 @@ Doplarr is a Discord/Slack bot for requesting media through Radarr, Sonarr, and 
 nomad var put nomad/jobs/doplarr discord_token="YOUR_DISCORD_BOT_TOKEN"
 
 # For Slack:
-nomad var put nomad/jobs/doplarr slack_bot_token="xoxb-YOUR-TOKEN" slack_signing_secret="YOUR_SECRET"
+nomad var put nomad/jobs/doplarr slack_bot_token="xoxb-YOUR-TOKEN" slack_app_token="xapp-YOUR-TOKEN"
 
 # For both (Discord + Slack simultaneously):
 nomad var put nomad/jobs/doplarr \
   discord_token="YOUR_DISCORD_BOT_TOKEN" \
   slack_bot_token="xoxb-YOUR-TOKEN" \
-  slack_signing_secret="YOUR_SECRET"
+  slack_app_token="xapp-YOUR-TOKEN"
 ```
 
 **Step 2: Deploy with your backend configuration**
@@ -445,9 +443,8 @@ nomad-pack run doplarr \
   --var sonarr_url=http://sonarr:8989 \
   --var sonarr_api_key=YOUR_SONARR_KEY
 
-# Slack + Seerr (with port exposed)
+# Slack + Seerr
 nomad-pack run doplarr \
-  --var expose_slack_port=true \
   --var seerr_url=http://seerr:5055 \
   --var seerr_api_key=YOUR_SEERR_KEY \
   --var seerr_fallback_user_id=1
